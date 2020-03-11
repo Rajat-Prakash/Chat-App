@@ -9,11 +9,35 @@ const $messages = document.querySelector('#messages')
 // Templates 
 const messageTemplate = document.querySelector('#message-template').innerHTML
 const mapsTemplate = document.querySelector('#url-template').innerHTML
+const sidebarTemplate = document.querySelector('#sidebar-template').innerHTML
 
 // Options
 const { username, room } = Qs.parse(location.search, { ignoreQueryPrefix: true })
 
 $locationButton = document.querySelector('#send-location')
+
+const autoscroll = () => {
+    // New message element
+    const $newMessage = $messages.lastElementChild
+
+    // Height of the new message
+    const newMessageStyles = getComputedStyle($newMessage)
+    const newMessageMargin = parseInt(newMessageStyles.marginBottom)
+    const newMessageHeight = $newMessage.offsetHeight + newMessageMargin
+
+    // Visible height
+    const visibleHeight = $messages.offsetHeight
+
+    // Height of messages container
+    const containerHeight = $messages.scrollHeight
+
+    // How far have I scrolled?
+    const scrollOffset = $messages.scrollTop + visibleHeight
+
+    if (containerHeight - newMessageHeight <= scrollOffset) {
+        $messages.scrollTop = $messages.scrollHeight
+    }
+}
 
 socket.on('message', (message) => {
     // Note: here in message means above es6 arguments we are receiving an object
@@ -25,6 +49,15 @@ socket.on('message', (message) => {
         createdAt: moment(message.createdAt).format('h:mm a')
     })
     $messages.insertAdjacentHTML('beforeend', html)
+    autoscroll()
+})
+
+socket.on('roomData', ({ room, users }) => {
+    const html = Mustache.render(sidebarTemplate, {
+        room,
+        users
+    })
+    document.querySelector('#sidebar').innerHTML = html
 })
 
 socket.on('sendLocation', (message) => {
@@ -35,6 +68,7 @@ socket.on('sendLocation', (message) => {
         createdAt: moment(message.createdAt).format('h:mm a')
     }) 
     $messages.insertAdjacentHTML('beforeend', urlhtml)
+    autoscroll()
 })
 
 document.querySelector('#message-form').addEventListener('submit', (e) => {
